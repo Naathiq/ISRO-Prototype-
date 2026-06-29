@@ -1,0 +1,8 @@
+{
+  "name": "ISRO Digital Twin",
+  "description": "A digital twin of Earth with interactive 3D globe visualization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
