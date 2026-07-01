@@ -140,11 +140,25 @@ const DigitalTwin = () => {
   // Resize listener
   useEffect(() => {
     const handleResize = () => {
-      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+      const container = document.getElementById('viewport-main');
+      if (container) {
+        setDimensions({ width: container.clientWidth, height: container.clientHeight });
+      } else {
+        setDimensions({ width: window.innerWidth, height: window.innerHeight });
+      }
     };
 
+    handleResize(); // Initial measurement
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const observer = new ResizeObserver(handleResize);
+    const container = document.getElementById('viewport-main');
+    if (container) observer.observe(container);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+    };
   }, []);
 
   // Three.js Clouds layer
@@ -631,10 +645,92 @@ const DigitalTwin = () => {
     : '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
 
   return (
-    <div className="relative w-full h-screen bg-[#07070a] overflow-hidden font-sans text-gray-200">
-      
-      {/* MAP / GLOBE RENDER */}
-      <div className="absolute inset-0 z-0">
+    <div className="system-wrapper">
+      <header>
+          <div className="brand-block">
+              <h1>ISRO</h1>
+          </div>
+          <div className="nav-cluster">
+              <button 
+                  className={`system-btn ${currentLayer === 'satellites' && !indiaMode ? 'primary' : ''}`}
+                  onClick={() => {
+                      setCurrentLayer('satellites');
+                      setSelectedFacility(null);
+                      setSelectedSat(null);
+                      setIndiaMode(false);
+                  }}
+              >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m13.5 6.5-3.148-3.148a1.205 1.205 0 0 0-1.704 0L6.352 5.648a1.205 1.205 0 0 0 0 1.704L9.5 10.5"></path><path d="M16.5 7.5 19 5"></path><path d="m17.5 10.5 3.148 3.148a1.205 1.205 0 0 1 0 1.704l-2.296 2.296a1.205 1.205 0 0 1-1.704 0L13.5 14.5"></path><path d="M9 21a6 6 0 0 0-6-6"></path><path d="M9.352 10.648a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l4.296-4.296a1.205 1.205 0 0 0 0-1.704l-2.296-2.296a1.205 1.205 0 0 0-1.704 0z"></path></svg>
+                  SATELLITE RADAR
+              </button>
+              <button 
+                  className={`system-btn ${currentLayer === 'climate' && !indiaMode ? 'primary' : ''}`}
+                  onClick={() => {
+                      setCurrentLayer('climate');
+                      setIndiaMode(false);
+                  }}
+              >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M16 14v6"></path><path d="M8 14v6"></path><path d="M12 16v6"></path></svg>
+                  INSAT CLIMATE
+              </button>
+              <button 
+                  className={`system-btn ${currentLayer === 'ocean' && !indiaMode ? 'primary' : ''}`}
+                  onClick={() => {
+                      setCurrentLayer('ocean');
+                      setIndiaMode(false);
+                  }}
+              >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12.8 19.6A2 2 0 1 0 14 16H2"></path><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"></path><path d="M9.8 4.4A2 2 0 1 1 11 8H2"></path></svg>
+                  JET CURRENTS
+              </button>
+              <button 
+                className="system-btn"
+                onClick={() => setIsSettingsOpen(true)}
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+          </div>
+      </header>
+
+      <div className="sidebar">
+          <div className="panel">
+              <div className="panel-title">
+                  <span>[01] ISRO Mission Nodes</span>
+                  <span>LIVE</span>
+              </div>
+              <div className="node-list">
+                  {facilities.map((fac) => (
+                    <div 
+                        key={fac.id}
+                        className={`node-card ${selectedFacility?.id === fac.id ? 'active' : ''}`}
+                        onClick={() => handleSelectFacility(fac)}
+                    >
+                        <div className="node-info"><h4>{fac.name}</h4><p>{fac.type}</p></div>
+                        <div className="node-val">98%</div>
+                    </div>
+                  ))}
+              </div>
+          </div>
+
+          <div className="panel">
+              <div className="panel-title"><span>[02] Node Context</span></div>
+              <div className="data-grid">
+                  <div className="data-cell"><label>Earth Orbit</label><span>1.09x <small>z</small></span></div>
+                  <div className="data-cell"><label>Grid Satellites</label><span>142 online</span></div>
+                  <div className="data-cell"><label>Uplink Freq</label><span>S-Band</span></div>
+                  <div className="data-cell"><label>Link integrity</label><span style={{color: '#2ecc71'}}>99.8%</span></div>
+              </div>
+          </div>
+      </div>
+
+      <main id="viewport-main" className="viewport-main">
+        <div className="viewport-labels">
+            POS: 21.0000° N, 78.0000° E<br/>ALT: 35,786 KM<br/>REF: GRS80
+        </div>
+        
+        {/* MAP / GLOBE RENDER */}
+        <div className="absolute inset-0 z-0 pointer-events-auto">
         {indiaMode ? (
           <MapContainer 
             center={[22.5, 79]} 
@@ -859,641 +955,87 @@ const DigitalTwin = () => {
           />
         )}
       </div>
+      </main>
 
-      {/* OVERLAY CONSOLE ELEMENTS */}
-      <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between">
-        
-        {/* TOP BAR BRANDING */}
-        <motion.header 
-          initial={{ y: -60, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="p-6 flex justify-between items-start z-20 pointer-events-auto h-24"
-        >
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-light tracking-[0.15em] text-white flex items-center gap-2">
-              <span className="text-cyan-400 font-extrabold tracking-[0.25em]">ISRO</span>
-              <span className="opacity-40 text-sm font-semibold">|</span>
-              <span className="opacity-95 font-medium text-lg tracking-[0.1em]">BHOOMIKA digital twin</span>
-            </h1>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-cyan-400/80 font-mono flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-ping" />
-              LIVE TELEMETRY COM LINK ESTABLISHED
-            </p>
-          </div>
-
-          {/* MAIN LAYER SELECTORS */}
-          <div className="flex gap-4 items-center">
-            <div className="bg-zinc-950/75 backdrop-blur-xl border border-zinc-800/80 rounded-xl p-1 flex gap-1 shadow-2xl shadow-blue-500/5">
-              {!indiaMode ? (
-                <>
-                  <button 
-                    onClick={() => {
-                      setCurrentLayer('satellites');
-                      setSelectedFacility(null);
-                      setSelectedSat(null);
-                    }}
-                    className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${currentLayer === 'satellites' ? 'bg-cyan-500 text-black font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+      <div className="sidebar">
+          <div className="panel">
+              <div className="panel-title"><span>[03] Launcher Constellation</span></div>
+              <p style={{fontSize: '0.7rem', marginBottom: '12px', lineHeight: '1.4'}}>Click any satellite sphere orbiting the globe surface to lock high frequency diagnostic sensors.</p>
+              <div className="node-list">
+                  <div 
+                      className={"node-card " + (selectedSat?.name === 'Cartosat-3' ? 'active' : '')} 
+                      style={{ borderLeftColor: '#2ecc71' }}
+                      onClick={() => handleSelectFacility({ name: 'Cartosat-3', type: 'Imaging Satellite', status: 'ONLINE', lat: 20, lng: 80 } as any)}
                   >
-                    <Satellite className="w-3.5 h-3.5" />
-                    SATELLITE RADAR
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setCurrentLayer('climate');
-                      setSelectedFacility(null);
-                      setSelectedSat(null);
-                    }}
-                    className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${currentLayer === 'climate' ? 'bg-orange-500 text-black font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                      <div className="node-info"><h4>Cartosat Payload</h4><p>Imaging</p></div>
+                      <div className="node-val" style={{color:'#2ecc71'}}>ONLINE</div>
+                  </div>
+                  <div 
+                      className={"node-card " + (selectedSat?.name === 'Resourcesat-2A' ? 'active' : '')} 
+                      style={{ borderLeftColor: 'var(--color-accent)' }}
+                      onClick={() => handleSelectFacility({ name: 'Resourcesat-2A', type: 'Multichannel Sensor', status: 'STANDBY', lat: 22, lng: 82 } as any)}
                   >
-                    <CloudRain className="w-3.5 h-3.5" />
-                    INSAT CLIMATE
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setCurrentLayer('ocean');
-                      setSelectedFacility(null);
-                      setSelectedSat(null);
-                    }}
-                    className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${currentLayer === 'ocean' ? 'bg-emerald-500 text-black font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                      <div className="node-info"><h4>Resourcesat Sensor</h4><p>Multichannel</p></div>
+                      <div className="node-val">STANDBY</div>
+                  </div>
+                  <div 
+                      className={"node-card " + (selectedSat?.name === 'GSAT-29' ? 'active' : '')} 
+                      style={{ borderLeftColor: '#2ecc71' }}
+                      onClick={() => handleSelectFacility({ name: 'GSAT-29', type: 'Communication Relay', status: 'STREAMING', lat: 24, lng: 84 } as any)}
                   >
-                    <Wind className="w-3.5 h-3.5" />
-                    JET CURRENTS
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button 
-                    onClick={() => setCurrentLayer('india_weather')}
-                    className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${currentLayer === 'india_weather' ? 'bg-indigo-500 text-white font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                  >
-                    <CloudRain className="w-3.5 h-3.5" />
-                    INDIA WEATHER
-                  </button>
-                  <button 
-                    onClick={() => setCurrentLayer('india_wind')}
-                    className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${currentLayer === 'india_wind' ? 'bg-indigo-500 text-white font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                  >
-                    <Wind className="w-3.5 h-3.5" />
-                    INDIA WIND
-                  </button>
-                  <button 
-                    onClick={() => setCurrentLayer('india_heat')}
-                    className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${currentLayer === 'india_heat' ? 'bg-indigo-500 text-white font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                  >
-                    <Thermometer className="w-3.5 h-3.5" />
-                    INDIA HEAT
-                  </button>
-                  <button 
-                    onClick={() => setCurrentLayer('india_visual')}
-                    className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${currentLayer === 'india_visual' ? 'bg-indigo-500 text-white font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                  >
-                    <Map className="w-3.5 h-3.5" />
-                    INDIA VISUAL
-                  </button>
-                </>
-              )}
-            </div>
-
-            <div className="bg-zinc-950/75 backdrop-blur-xl border border-zinc-800/80 p-1 flex gap-1 rounded-xl shadow-2xl">
-              <button 
-                onClick={() => {
-                  setIndiaMode(!indiaMode);
-                  if (!indiaMode) {
-                    setCurrentLayer('india_weather');
-                  } else {
-                    setCurrentLayer('satellites');
-                  }
-                }}
-                className={`px-4 py-2 text-[10px] font-mono tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${indiaMode ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-              >
-                <Navigation className="w-3.5 h-3.5" />
-                INDIA REGION
-              </button>
-              <div className="w-[1px] h-8 bg-zinc-800 mx-1 self-center" />
-              <button 
-                onClick={() => setDayNightMode(!dayNightMode)}
-                className={`p-2.5 rounded-lg transition-all flex items-center justify-center ${dayNightMode ? 'bg-indigo-500/10 text-indigo-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                title="Night Mode Overlay"
-              >
-                <Sun className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setCloudsMode(!cloudsMode)}
-                className={`p-2.5 rounded-lg transition-all flex items-center justify-center ${cloudsMode ? 'bg-indigo-500/10 text-indigo-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                title="Toggle Real-time Clouds"
-              >
-                <RefreshCw className={`w-4 h-4 ${cloudsMode ? 'animate-spin-slow' : ''}`} />
-              </button>
-              <div className="w-[1px] h-8 bg-zinc-800 mx-1 self-center" />
-              <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2.5 rounded-lg transition-all flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5"
-                title="Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </motion.header>
-
-        {/* SIDE PANELS AND POPUPS CONTAINER */}
-        <div className="flex-1 flex justify-between px-6 py-4 overflow-hidden h-[calc(100vh-172px)]">
-          
-          {/* LEFT COLUMN: CONTROL & GROUND HUB LIST */}
-          <div className="w-80 flex flex-col gap-4 pointer-events-auto overflow-y-auto">
-            
-            {/* ISRO GROUND NETWORKS */}
-            <motion.div 
-              initial={{ x: -40, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6 }}
-              className="bg-black/85 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-5 flex flex-col gap-4 shadow-[#000_0_20px_40px]"
-            >
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-xs uppercase tracking-wider font-semibold text-white">ISRO Mission Nodes</h3>
-                </div>
-                <span className="text-[10px] bg-cyan-400/10 text-cyan-400 font-mono px-1.5 py-0.5 rounded-md">Live</span>
+                      <div className="node-info"><h4>Gaganyaan Relay</h4><p>Communcation</p></div>
+                      <div className="node-val" style={{color:'#2ecc71'}}>STREAMING</div>
+                  </div>
               </div>
-
-              <div className="flex flex-col gap-2.5">
-                {facilities.map((fac) => (
-                  <button
-                    key={fac.id}
-                    onClick={() => handleSelectFacility(fac)}
-                    className={`text-left p-3 rounded-xl border transition-all flex justify-between items-center group font-mono ${selectedFacility?.id === fac.id ? 'bg-cyan-500/10 border-cyan-400 text-white' : 'bg-zinc-900/30 border-zinc-800/40 text-gray-400 hover:border-zinc-700/60 hover:text-white'}`}
-                  >
-                    <div>
-                      <h4 className="text-xs font-semibold tracking-wide text-gray-200 group-hover:text-cyan-400 transition-colors">{fac.text}</h4>
-                      <p className="text-[10px] text-gray-500 mt-0.5">{fac.city}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] text-[10px] tracking-wider text-green-400 font-medium">98%</span>
-                      <ArrowRight className="w-3 h-3 text-gray-500 group-hover:translate-x-1 transition-transform" />
-                    </div>
+          </div>
+          <div className="panel" style={{flex: 1}}>
+              <div className="panel-title"><span>[04] Display Config</span></div>
+              <div className="nav-cluster" style={{flexDirection: 'column', width: '100%'}}>
+                  <button className={"system-btn " + (indiaMode ? 'primary' : '')} style={{width: '100%'}} onClick={() => {
+                        setIndiaMode(!indiaMode);
+                        if (!indiaMode) {
+                          setCurrentLayer('india_weather');
+                        } else {
+                          setCurrentLayer('satellites');
+                        }
+                      }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                      INDIA REGION
                   </button>
-                ))}
+                  <button className={"system-btn " + (dayNightMode ? 'primary' : '')} style={{width: '100%'}} onClick={() => setDayNightMode(!dayNightMode)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path></svg>
+                      NIGHT OVERLAY
+                  </button>
+                  <button className={"system-btn " + (cloudsMode ? 'primary' : '')} style={{width: '100%'}} onClick={() => setCloudsMode(!cloudsMode)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path></svg>
+                      {cloudsMode ? 'HIDE CLOUDS' : 'SHOW CLOUDS'}
+                  </button>
               </div>
-            </motion.div>
-
-            {/* QUICK STATS BASED ON MODE */}
-            <motion.div 
-              initial={{ x: -40, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="bg-black/85 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-5 flex flex-col gap-4 shadow-2xl"
-            >
-              <h3 className="text-xs uppercase tracking-wider font-semibold text-gray-400 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-cyan-500" />
-                Active Node Context
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="bg-zinc-900/40 border border-zinc-800/70 rounded-xl p-3 flex flex-col">
-                  <span className="text-[9px] text-gray-500 font-mono uppercase tracking-wider mb-1">Earth Orbit</span>
-                  <span className="text-lg font-light text-cyan-400">1.09x <span className="text-[11px] text-gray-500">z</span></span>
-                </div>
-                <div className="bg-zinc-900/40 border border-zinc-800/70 rounded-xl p-3 flex flex-col">
-                  <span className="text-[9px] text-gray-500 font-mono uppercase tracking-wider mb-1">Grid Satellites</span>
-                  <span className="text-lg font-light text-cyan-400">142 online</span>
-                </div>
-                <div className="bg-zinc-900/40 border border-zinc-800/70 rounded-xl p-3 flex flex-col">
-                  <span className="text-[9px] text-gray-500 font-mono uppercase tracking-wider mb-1">Uplink Freq</span>
-                  <span className="text-lg font-light text-cyan-400">S-Band</span>
-                </div>
-                <div className="bg-zinc-900/40 border border-zinc-800/70 rounded-xl p-3 flex flex-col">
-                  <span className="text-[9px] text-gray-500 font-mono uppercase tracking-wider mb-1">Link integrity</span>
-                  <span className="text-lg font-light text-green-400">99.8%</span>
-                </div>
-              </div>
-            </motion.div>
-
           </div>
-
-          {/* CENTRE PORTION: INTERACTIVE DIAGNOSTIC REPORT CARD */}
-          <div className="flex-1 flex items-center justify-center px-6 pointer-events-none">
-            <AnimatePresence mode="wait">
-              {/* Ground facility detailed diagnostic */}
-              {selectedFacility && (
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  className="pointer-events-auto bg-[#09090e]/95 backdrop-blur-2xl border border-cyan-500/30 w-[420px] rounded-2xl p-6 flex flex-col gap-4 shadow-[0_0_50px_rgba(6,182,212,0.15)] shadow-[#000_0_20px_40px]"
-                >
-                  <div className="flex justify-between items-start border-b border-zinc-800 pb-3.5">
-                    <div>
-                      <div className="text-[9px] font-mono text-cyan-400 tracking-[0.25em] h-3">NODE INSPECTOR</div>
-                      <h3 className="text-lg font-semibold text-white tracking-wide">{selectedFacility.text}</h3>
-                      <p className="text-xs text-gray-400 font-mono">{selectedFacility.city}, India</p>
-                    </div>
-                    <button 
-                      onClick={() => setSelectedFacility(null)}
-                      className="text-gray-500 hover:text-white hover:bg-white/5 rounded-lg p-1.5 transition-colors font-mono text-[10px]"
-                    >
-                      [CLOSE]
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-gray-300 leading-relaxed font-sans">{selectedFacility.details}</p>
-
-                  <div className="grid grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/60 font-mono text-[11px] mt-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] text-gray-500 uppercase tracking-wider">Antenna System</span>
-                      <span className="text-gray-200">{selectedFacility.antenna}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] text-gray-500 uppercase tracking-wider">Downlink Freq</span>
-                      <span className="text-cyan-400">{selectedFacility.uplink}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 col-span-2 pt-2 border-t border-zinc-800/40 flex justify-between flex-row items-center">
-                      <span className="text-[9px] text-gray-500 uppercase tracking-wider">Operational Status</span>
-                      <span className="text-green-400 font-bold bg-green-400/10 px-2 py-0.5 rounded text-[10px] tracking-widest">{selectedFacility.status}</span>
-                    </div>
-                  </div>
-
-                  {/* Satellite beam arc link visualiser triggers when selected */}
-                  <div className="p-3 bg-cyan-400/5 rounded-lg border border-cyan-400/15 flex items-center justify-between text-[11px] font-mono mt-1">
-                     <span className="text-gray-400 flex items-center gap-1.5">
-                        <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                        Scanning for regional overhead passes...
-                     </span>
-                     <span className="text-cyan-400 font-semibold animate-pulse">ONLINE</span>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Satellite detailed diagnostic */}
-              {selectedSat && (
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  className="pointer-events-auto bg-[#09090e]/95 backdrop-blur-2xl border border-cyan-500/30 w-[420px] rounded-2xl p-6 flex flex-col gap-4 shadow-[0_0_50px_rgba(6,182,212,0.15)] shadow-[#000_0_20px_40px]"
-                >
-                  <div className="flex justify-between items-start border-b border-zinc-800 pb-3.5">
-                    <div>
-                      <div className="text-[9px] font-mono text-cyan-400 tracking-[0.25em] h-3">ORBITAL CORE DIAGNOSTIC</div>
-                      <h3 className="text-lg font-semibold text-white tracking-wide">{selectedSat.name}</h3>
-                      <p className="text-xs text-gray-400 font-mono">INSAT / IRS System constellation</p>
-                    </div>
-                    <button 
-                      onClick={() => setSelectedSat(null)}
-                      className="text-gray-500 hover:text-white hover:bg-white/5 rounded-lg p-1.5 transition-colors font-mono text-[10px]"
-                    >
-                      [CLOSE]
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/60 font-mono text-[11px]">
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-gray-500 uppercase">Telemetry Payload</span>
-                      <span className="text-gray-200 font-sans mt-0.5">{selectedSat.payload}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-gray-500 uppercase">Velocity</span>
-                      <span className="text-cyan-400 mt-0.5">{selectedSat.velocity}</span>
-                    </div>
-                    <div className="flex flex-col pt-2 border-t border-zinc-800/45">
-                      <span className="text-[9px] text-gray-500 uppercase">Latitude</span>
-                      <span className="text-white mt-0.5">{selectedSat.lat.toFixed(4)}°</span>
-                    </div>
-                    <div className="flex flex-col pt-2 border-t border-zinc-800/45">
-                      <span className="text-[9px] text-gray-500 uppercase">Longitude</span>
-                      <span className="text-white mt-0.5">{selectedSat.lng.toFixed(4)}°</span>
-                    </div>
-                    <div className="flex flex-col col-span-2 pt-2.5 border-t border-zinc-800/45 flex justify-between flex-row items-center">
-                      <span className="text-[9px] text-gray-500 uppercase">Solar Battery Bank</span>
-                      <span className="text-green-400 font-bold">{selectedSat.battery}% charge</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800/70 flex items-center gap-3">
-                     <span className="flex-1 text-[11px] text-gray-400 font-mono">Establishing secondary S-band tracking vector down to universal ground node Bengaluru (ISTRAC).</span>
-                     <button 
-                       onClick={() => {
-                         // Spin camera to Bengaluru instantly
-                         if (globeRef.current) {
-                            globeRef.current.pointOfView({
-                               lat: BENGALURU.lat,
-                               lng: BENGALURU.lng,
-                               altitude: 1.6
-                            }, 1800);
-                         }
-                       }}
-                       className="px-3 py-1.5 bg-cyan-400/10 hover:bg-cyan-500 hover:text-black border border-cyan-400/20 rounded-lg text-[10px] font-mono text-cyan-400 font-bold tracking-wider transition-all"
-                     >
-                       RE-INDEX GROUND LINK
-                     </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* RIGHT COLUMN: METEOROLOGICAL ANOMALIES & HEATING */}
-          <div className="w-96 flex flex-col gap-4 pointer-events-auto overflow-y-auto">
-            
-            <AnimatePresence mode="wait">
-              {(currentLayer === 'climate' || currentLayer === 'india_weather' || currentLayer === 'india_heat') && (
-                <motion.div 
-                  initial={{ x: 40, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 40, opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="bg-black/85 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-5 flex flex-col gap-4 shadow-[#000_0_20px_40px]"
-                >
-                  <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-                    <h3 className="text-xs uppercase tracking-widest font-semibold flex items-center gap-2 text-white">
-                      <Thermometer className="w-4 h-4 text-orange-400 animate-pulse" />
-                      {currentLayer === 'india_heat' ? 'INDIA HEAT WAVE INDEX' : currentLayer === 'india_weather' ? 'INDIA WEATHER SYSTEMS' : 'INSAT Thermal Anomaly'}
-                    </h3>
-                    <span className="text-[10px] bg-orange-500/10 text-orange-400 font-mono px-2 py-0.5 rounded-md">2026 YTD</span>
-                  </div>
-                  
-                  <div className="h-48 w-full -ml-4 mt-2 filter drop-shadow-md">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={tempTrendData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <filter id="glowOrange" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#f97316" floodOpacity="0.8"/>
-                          </filter>
-                          <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.6}/>
-                            <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorBaseline" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4}/>
-                            <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-                        <XAxis dataKey="month" stroke="#525252" fontSize={10} tickLine={false} axisLine={false} tickMargin={8} />
-                        <YAxis stroke="#525252" fontSize={10} tickLine={false} axisLine={false} unit="°" domain={[0.6, 1.6]} tickFormatter={(val) => val.toFixed(1)} />
-                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                        
-                        <Area type="monotone" dataKey="baseline" name="Mean Baseline" stroke="#0ea5e9" strokeWidth={1.5} fillOpacity={1} fill="url(#colorBaseline)" activeDot={{ r: 3, fill: '#0ea5e9' }} />
-                        <Area type="monotone" dataKey="temp" name="2026 Anomaly" stroke="#f97316" strokeWidth={2.5} fillOpacity={1} fill="url(#colorTemp)" style={{ filter: 'url(#glowOrange)' }} activeDot={{ r: 5, fill: '#f97316', stroke: '#fff', strokeWidth: 2 }} />
-                        
-                        {/* Interactive reference line aligned to current monthly time step */}
-                        <ReferenceLine x={currentMonthName} stroke="#f97316" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: `T-${currentMonthName}`, fill: '#f97316', fontSize: 10, position: 'top', fontWeight: 600 }} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
-                    <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-xl p-3 flex flex-col">
-                      <span className="text-[9px] text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <CloudRain className="w-3.5 h-3.5 text-blue-400" /> Precipitation
-                      </span>
-                      <span className="text-base font-semibold text-white mt-1">{precipAnomaly}<span className="text-[10px] text-gray-500 ml-1">% dev</span></span>
-                    </div>
-                    <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-xl p-3 flex flex-col">
-                      <span className="text-[9px] text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <Thermometer className="w-3.5 h-3.5 text-orange-400" /> Temperature
-                      </span>
-                      <span className="text-base font-semibold text-white mt-1">+{currentTempAnomaly}°C</span>
-                    </div>
-                  </div>
-
-                  {/* Thermal Index Legend */}
-                  <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-xl p-3 flex flex-col gap-2 mt-1">
-                     <span className="text-[9px] text-gray-400 uppercase tracking-widest flex items-center justify-between">
-                       <span>Thermal Index</span>
-                       <span>°C Anomaly</span>
-                     </span>
-                     <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-blue-900 via-sky-400,yellow-400,orange-500,red-500 to-rose-600 opacity-90" />
-                     <div className="flex justify-between text-[9px] font-mono text-gray-500">
-                       <span>Cool (-10)</span>
-                       <span>Avg</span>
-                       <span>Warm</span>
-                       <span>Hot (+20)</span>
-                     </div>
-                  </div>
-
-                  {/* Active Cyclone Monitoring Warnings */}
-                  <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-3 flex flex-col gap-1.5">
-                     <span className="text-[10px] uppercase font-semibold text-red-400 tracking-wider flex items-center gap-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-                        Met Hazard Advisories (INSAT)
-                     </span>
-                     <p className="text-[10px] text-gray-400 leading-relaxed font-sans">
-                        Typhoon Gaemi is exhibiting severe shear with surface wind speeds near 140kt. Tracking vector: West-Northwest.
-                     </p>
-                  </div>
-                </motion.div>
-              )}
-
-              {(currentLayer === 'ocean' || currentLayer === 'india_wind') && (
-                <motion.div 
-                  initial={{ x: 40, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 40, opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="bg-black/85 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-5 flex flex-col gap-4 shadow-[#000_0_20px_40px]"
-                >
-                  <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-                    <h3 className="text-xs uppercase tracking-widest font-semibold flex items-center gap-2 text-white">
-                      <Wind className="w-4 h-4 text-emerald-400" />
-                      {currentLayer === 'india_wind' ? 'INDIA WIND VECTOR CURRENTS' : 'Dynamic Vector Currents'}
-                    </h3>
-                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-mono px-2 py-0.5 rounded-md">Continuous Flow</span>
-                  </div>
-
-                  {/* Current flow tracking */}
-                  <div className="flex flex-col gap-3 font-mono text-[11px] bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50">
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Atmospheric Jet stream</span>
-                       <span className="text-white font-semibold">{windSpeedMultiplier} kt</span>
-                    </div>
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Easterly Wave speed</span>
-                       <span className="text-white font-semibold">22 m/s</span>
-                    </div>
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Bay of Bengal vector surge</span>
-                       <span className="text-[#38bdf8] font-semibold">Elevated (Warm)</span>
-                    </div>
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Rossby Wave resonance</span>
-                       <span className="text-white font-semibold">3.82 rad/s</span>
-                    </div>
-                  </div>
-
-                  {/* Visual Wind Key */}
-                  <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-xl p-3 flex flex-col gap-2.5">
-                     <span className="text-[10px] text-gray-400 uppercase tracking-wider">Stream Color index</span>
-                     <div className="flex flex-col gap-2 text-[10px] font-mono">
-                        <div className="flex items-center gap-2">
-                           <span className="w-2.5 h-2.5 rounded-full bg-orange-400" />
-                           <span className="text-gray-300">Equatorial Trade Winds & currents (Warm)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                           <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
-                           <span className="text-gray-300">Mid-latitude Westerly Streamflows (Temperate)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                           <span className="w-2.5 h-2.5 rounded-full bg-white" />
-                           <span className="text-gray-300">Polar Vortex circulation vectors (Frigid)</span>
-                        </div>
-                     </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {currentLayer === 'india_visual' && (
-                <motion.div 
-                  initial={{ x: 40, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 40, opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="bg-black/85 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-5 flex flex-col gap-4 shadow-[#000_0_20px_40px]"
-                >
-                  <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-                    <h3 className="text-xs uppercase tracking-widest font-semibold flex items-center gap-2 text-white">
-                      <Map className="w-4 h-4 text-indigo-400" />
-                      Visual Topography (India)
-                    </h3>
-                    <span className="text-[10px] bg-indigo-500/10 text-indigo-400 font-mono px-2 py-0.5 rounded-md">High-Res Map</span>
-                  </div>
-
-                  <p className="text-xs text-gray-400 leading-relaxed font-sans">
-                     High-resolution optical satellite imagery of the Indian subcontinent showing natural terrain, vegetation, and topological formations.
-                  </p>
-
-                  <div className="flex flex-col gap-3 font-mono text-[11px] bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50">
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Image Source</span>
-                       <span className="text-white font-semibold">Cartosat-3 Optical</span>
-                    </div>
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Resolution</span>
-                       <span className="text-white font-semibold">0.25 meters / px</span>
-                    </div>
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Cloud Cover Filter</span>
-                       <span className="text-indigo-400 font-semibold">Enabled</span>
-                    </div>
-                    <div className="flex justify-between">
-                       <span className="text-gray-400">Last Refresh</span>
-                       <span className="text-white font-semibold">Real-time (Daylight)</span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {currentLayer === 'satellites' && (
-                <motion.div 
-                  initial={{ x: 40, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 40, opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="bg-black/85 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-5 flex flex-col gap-4 shadow-[#000_0_20px_40px]"
-                >
-                  <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-                    <h3 className="text-xs uppercase tracking-widest font-semibold flex items-center gap-2 text-white">
-                      <Satellite className="w-4 h-4 text-cyan-400" />
-                      Active Launcher Constellation
-                    </h3>
-                    <span className="text-[10px] bg-cyan-500/10 text-cyan-400 font-mono px-2 py-0.5 rounded-md">Live feed</span>
-                  </div>
-
-                  <p className="text-xs text-gray-400 leading-relaxed font-sans">
-                     Click any satellite sphere orbiting the globe surface to lock high frequency diagnostic sensors and route ground telecom arrays.
-                  </p>
-
-                  <div className="flex flex-col gap-2 mt-1">
-                     <div className="flex justify-between items-center bg-zinc-900/30 outline outline-1 outline-zinc-800 p-2.5 rounded-lg text-[11px] font-mono">
-                        <span className="text-gray-400">Cartosat High Res Image Payload</span>
-                        <span className="text-green-400 font-bold">ONLINE</span>
-                     </div>
-                     <div className="flex justify-between items-center bg-zinc-900/30 outline outline-1 outline-zinc-800 p-2.5 rounded-lg text-[11px] font-mono">
-                        <span className="text-gray-400">Resourcesat Multichannel Sensor</span>
-                        <span className="text-cyan-400 font-bold">STANDBY</span>
-                     </div>
-                     <div className="flex justify-between items-center bg-zinc-900/30 outline outline-1 outline-zinc-800 p-2.5 rounded-lg text-[11px] font-mono">
-                        <span className="text-gray-400">Gaganyaan communications relay</span>
-                        <span className="text-green-400 font-bold">STREAMING</span>
-                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-          </div>
-        </div>
-
-        {/* TIME BAR: TIMELINE INDEX SCRUBBER */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto z-30 w-[640px]">
-          <motion.div 
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, type: "spring", bounce: 0.1 }}
-            className="bg-black/85 backdrop-blur-xl border border-zinc-800/80 rounded-2xl px-6 py-4 flex items-center gap-5 shadow-[#000_0_20px_50px] w-full"
-          >
-            {/* Play Button */}
-            <button 
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="text-black hover:scale-105 transition-all p-2.5 bg-cyan-400 hover:bg-cyan-300 rounded-xl"
-              title={isPlaying ? "Pause Simulation" : "Start Timeline Simulation"}
-            >
-              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-            </button>
-
-            {/* Time Slider */}
-            <div className="flex-1 flex flex-col gap-1.5 select-none relative">
-               <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em]">
-                  <span className="text-gray-500">History (-48h)</span>
-                  <span className="text-cyan-400 font-bold flex items-center gap-1.5 bg-cyan-950/40 px-2.5 py-0.5 rounded-full border border-cyan-800/50">
-                     <span className={`w-1.5 h-1.5 bg-cyan-400 rounded-full ${isPlaying ? 'animate-ping' : ''}`} />
-                     {Math.abs(timeStep - 50) < 0.5 ? 'LIVE' : `${currentMonthName} 2026 : T${timeStep > 50 ? '+' : '-'}${(Math.abs(timeStep - 50) * 0.96).toFixed(1)}h`}
-                  </span>
-                  <span className="text-gray-500">Projection (+48h)</span>
-               </div>
-               
-               <div className="relative flex items-center mt-2 h-4">
-                 {/* Timeline markers */}
-                 <div className="absolute inset-0 flex justify-between px-1 pointer-events-none">
-                    {[0, 25, 50, 75, 100].map(mark => (
-                       <div key={mark} className="flex flex-col items-center">
-                          <div className={`w-[1px] h-2 ${mark === 50 ? 'bg-cyan-500' : 'bg-zinc-600'}`} />
-                          <span className={`text-[8px] font-mono mt-1 ${mark === 50 ? 'text-cyan-500 font-bold' : 'text-zinc-600'}`}>
-                             {mark === 50 ? 'LIVE' : ''}
-                          </span>
-                       </div>
-                    ))}
-                 </div>
-                 
-                 <input 
-                    type="range"
-                    min="0" max="100" step="0.1"
-                    value={timeStep}
-                    onChange={(e) => setTimeStep(parseFloat(e.target.value))}
-                    className="w-full h-1 bg-zinc-800/80 rounded-full appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_12px_#00e5ff] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-125 z-10 relative bg-transparent"
-                 />
-                 <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-cyan-900 to-cyan-400 rounded-l-full pointer-events-none" style={{ width: `${Math.min(100, Math.max(0, timeStep))}%` }} />
-               </div>
-            </div>
-
-            {/* Reset Button */}
-            <button 
-              onClick={() => {
-                setTimeStep(50);
-                setIsPlaying(false);
-              }}
-              className="p-2.5 hover:bg-white/5 border border-zinc-800/80 rounded-xl hover:text-white text-gray-400 transition-colors"
-              title="Reset to center time"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </motion.div>
-        </div>
-
       </div>
 
-      {/* SETTINGS SLIDE PANEL */}
+      <div className="controls-bar">
+          <button className="system-btn primary" style={{padding: '12px'}} onClick={() => setIsPlaying(!isPlaying)}>
+              {isPlaying ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+              ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg>
+              )}
+          </button>
+          <div className="timeline-wrapper">
+              <div className="timeline-meta">
+                  <span>History (-48h)</span>
+                  <span className="time-badge">{Math.abs(timeStep - 50) < 0.5 ? 'LIVE' : `DEC 2026 : T${timeStep > 50 ? '+' : '-'}${(Math.abs(timeStep - 50) * 0.96).toFixed(1)}H`}</span>
+                  <span>Projection (+48h)</span>
+              </div>
+              <input type="range" className="system-slider" min="0" max="100" step="0.1" value={timeStep} onChange={(e) => setTimeStep(parseFloat(e.target.value))} />
+          </div>
+          <button className="system-btn" onClick={() => { setTimeStep(50); setIsPlaying(false); }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path></svg> 
+              RESET
+          </button>
+      </div>
+
       <AnimatePresence>
         {isSettingsOpen && (
           <>
@@ -1564,53 +1106,11 @@ const DigitalTwin = () => {
                     </button>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <h3 className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Region Focus</h3>
-                  
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400">
-                        <Navigation className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-200">India Regional Mode</div>
-                        <div className="text-[10px] text-gray-500">Lock focus to Indian subcontinent</div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setIndiaMode(!indiaMode);
-                        if (!indiaMode) {
-                          setCurrentLayer('india_weather');
-                        } else {
-                          setCurrentLayer('satellites');
-                        }
-                      }}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${indiaMode ? 'bg-orange-500' : 'bg-zinc-700'}`}
-                    >
-                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${indiaMode ? 'translate-x-5' : 'translate-x-1'}`} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-8 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-xs font-bold text-red-400 mb-1">SYSTEM WARNING</div>
-                      <div className="text-[10px] text-red-400/80 leading-relaxed">
-                        Modifying rendering settings may impact performance. Ensure adequate GPU resources are available before enabling complex atmospheric simulations.
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-
     </div>
   );
 };
